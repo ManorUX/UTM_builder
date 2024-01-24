@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    /* Custom CSS to increase border contrast */
+    label {
+      font-weight: 700;
+    }
+
+    .container {
+      position: relative;
+      /* Card uses absolute positioning */
+      z-index: 1;
+      /* Ensure the card is above other content */
+    }
+
+    .form-control,
+    .form-select,
+    .form-check-input {
+      margin-top: 12px;
+      ;
+      border-color: hsla(211, 100%, 50%, 0.541);
+      /* Change the focus border color */
+    }
+
+    .form-control:focus {
+      border-color: #007bff;
+      /* Change the focus border color */
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+      /* Change the focus box-shadow */
+    }
+
+    .form-select:focus {
+      border-color: #007bff;
+      /* Change the focus border color for select elements */
+    }
+
+    /* DRAWER */
+    /* Custom CSS for the drawer menu */
+    #toggleDrawer {
+
+      z-index: 90;
+      background-color: aliceblue;
+    }
+
+    #toggleDrawer:hover {
+      background-color: black;
+    }
+
+    #drawer {
+      position: fixed;
+      z-index: 50;
+      top: 0;
+      left: -100%;
+      /* Adjust the width to control the initial state */
+      width: 480px;
+      /* Adjust the width of the drawer menu */
+      /* height: 100%; */
+      height: 100vh;
+      background-color: #333;
+      /* Background color of the drawer */
+      padding: 20px;
+      transition: left 0.3s;
+      /* Add smooth sliding animation */
+      padding-top: 1.5rem;
+      color: white;
+    }
+
+    .title {
+      padding-bottom: 1rem;
+    }
+
+    .title h3 {
+      display: contents;
+    }
+
+    .title button {
+      margin-left: 150px;
+      vertical-align: top;
+    }
+
+    #drawer.show {
+      left: 0;
+      /* Show the drawer menu */
+    }
+
+    .list-group-item {
+      white-space: nowrap;
+      width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.75rem;
+    }
+
+    #content {
+      margin-left: 0;
+      /* Adjust the margin to make space for the drawer menu */
+      transition: margin-left 0.3s;
+      /* Add smooth sliding animation for content */
+    }
+
+    #content.show {
+      margin-left: 600px;
+      /* Adjust the margin to show content next to the menu */
+    }
+  </style>
+
+
+  <script>
+
+    var subjectObject = {
+      "Social Awareness": {
+        "facebook": ["social", "paid_awareness"],
+        "instagram": ["social", "paid_awareness"],
+        "tiktok": ["social", "paid_awareness"],
+        "twitter": ["social", "paid_awareness"],
+        "pinterest": ["social", "paid_awareness"]
+      },
+
+      "Social Performance": {
+        "facebook": ["paid_performance"],
+        "instagram": ["paid_performance"],
+        "tiktok": ["paid_performance"],
+        "twitter": ["paid_performance"],
+        "pinterest": ["paid_performance"],
+      },
+
+      "Email": {
+        "newsletter": ["email"],
+        "esb": ["email"]
+      },
+
+      "QR Code": {
+        "pos_visual": ["qrcode"],
+        "pos": ["qrcode"]
+      }
+    }
+    // Call the loadCampaignHistory function when the page loads to load stored URLs
+
+    window.onload = function () {
+      loadCampaignHistory();
+      var subjectSel = document.getElementById("channel");
+      var topicSel = document.getElementById("utm_source");
+      var chapterSel = document.getElementById("utm_medium");
+      for (var x in subjectObject) {
+        subjectSel.options[subjectSel.options.length] = new Option(x, x);
+      }
+      subjectSel.onchange = function () {
+        //empty Chapters- and Topics- dropdowns
+        chapterSel.length = 1;
+        topicSel.length = 1;
+        //display correct values
+        for (var y in subjectObject[this.value]) {
+          topicSel.options[topicSel.options.length] = new Option(y, y);
+        }
+      }
+      topicSel.onchange = function () {
+        //empty Chapters dropdown
+        chapterSel.length = 1;
+        //display correct values
+        var z = subjectObject[subjectSel.value][this.value];
+        for (var i = 0; i < z.length; i++) {
+          chapterSel.options[chapterSel.options.length] = new Option(z[i], z[i]);
+        }
+      }
+    }
+  </script>
+</head>
+
+<body>
+
+  <!-- Drawer menu content -->
+  <div id="drawer">
+    <div class="title">
+      <h3>UTM History</h3><button type="button" id="closeDrawer" class="btn-close btn-close-white"
+        aria-label="Close"></button>
+    </div>
+    <p class="alert alert-warning">These links are stored in your browser session and might be lost upon cache cleaning,
+      or not work in Private
+      mode. <a href="#" id="deleteHistory" style="color: red; font-weight: 600;">Delete UTM link history</a></p>
+
+    <ul id="storedUrls" class="list-group">
+      <!-- List items will be added dynamically here -->
+    </ul>
+  </div>
+
+  <div class="container">
+    <nav class="navbar navbar-light bg-light">
+      <div class="container">
+        <a class="navbar-brand" href="#">
+          <img src="https://www.manor.ch/assets/logo.svg" alt="Manor logo" width="180" height="24"
+            class="d-inline-block align-text-top">
+          UTM Link Builder
+        </a>
+        <button id="toggleDrawer" class="btn btn-outline-dark">Open History</button>
+      </div>
+    </nav>
+    <!-- Button to toggle the drawer menu -->
+
+    <form name="form" id="form">
+      <div class="form-floating mb-3 row">
+        <input type="text" id="url" name="url" class="form-control" required>
+        <label for="url" class="col-sm-2 col-form-label">Website URL*:</label>
+        <div class="invalid-feedback">Please make sure the URL is complete and follows the "htps://www." and
+          ".com/page" pattern</div>
+      </div>
+      <!-- ID -->
+      <div class="form-floating mb-3 row">
+        <input type="text" id="utm_id" name="utm_id" class="form-control">
+        <label for="utm_id" class="col-sm-2 col-form-label">Campaign ID:</label>
+      </div>
+      <!-- Channel -->
+      <div class="form-floating mb-3 row">
+        <select class="form-select" name="channel" id="channel" aria-label="Select Campaign channel" required>
+          <option value="" selected="selected">Select channel</option>
+        </select>
+        <label for="channel" class="col-sm-2 col-form-label">Channel*:</label>
+        <div class="invalid-feedback">Please select a campaign channel.</div>
+        <div id="channelHelp" class="form-text">It help us to set the soruce and medium values in relation to our
+          channel</div>
+      </div>
+      <!-- Source -->
+      <div class="form-floating mb-3 row">
+        <select name="utm_source" id="utm_source" class="form-select" required>
+          <option value="" selected="selected">Select source</option>
+        </select>
+        <label for="utm_source" class="col-sm-2 col-form-label">Source*:</label>
+        <div class="invalid-feedback">Please select a Source.</div>
+      </div>
+
+      <!-- Medium -->
+      <div class="form-floating mb-3 row">
+        <select name="utm_medium" id="utm_medium" class="form-select" required>
+          <option value="" selected="selected">Select medium</option>
+        </select>
+        <label for="utm_medium" class="col-sm-2 col-form-label">Medium*:</label>
+        <div class="invalid-feedback">Please select a Medium.</div>
+      </div>
+
+      <!-- Name -->
+      <div class="form-floating mb-3 row">
+        <input type="text" id="utm_campaign" name="utm_campaign" class="form-control" required>
+        <div class="invalid-feedback">Please enter a campaign name.</div>
+        <label for="utm_campaign" class="col-sm-3 col-form-label">Campaign Name*:</label>
+        <div class="invalid-feedback">Please enter a campaign name.</div>
+      </div>
+      <!-- Checkbox and Date Picker -->
+      <div class="col-mb-3 row">
+        <label class="form-check-label col-sm-3 right">Select and Prepend starting date:</label>
+        <div class="col-sm-6">
+          <input type="checkbox" id="start_date_checkbox" name="start_date_checkbox" class="form-check-input">
+          <input type="date" id="start_date" name="start_date" style="display: none;">
+        </div>
+      </div>
+
+      <!-- TERM -->
+      <div class="form-floating mb-3 row">
+        <input type="text" id="utm_term" name="utm_term" class="form-control">
+        <label for="utm_term" class="col-sm-1 col-form-label">Term</label>
+      </div>
+
+      <!-- Content -->
+      <div class="form-floating mb-3 row">
+        <input type="text" id="utm_content" name="utm_content" class="form-control">
+        <label for="utm_content" class="col-sm-1 col-form-label">Content</label>
+      </div>
+      <div class="row mt-3" style="margin-bottom: 1rem;">
+        <div class="col-sm-6 text-start">
+          <button type="submit" class="btn btn-primary">Generate UTM</button>
+        </div>
+        <div class="col-sm-6 d-flex align-items-center justify-content-end">
+          <input type="reset" class="btn btn-secondary" value="Reset Form">
+        </div>
+      </div>
+
+
+    </form>
+    <div class="card  mb-3 row">
+      <div class="card-body">
+        <h5 class="card-title">Full URL</h5>
+        <span id="fullUrl" class="card-text"></span>
+        <button id="copyButton" class="btn btn-primary invisible">Copy UTM</button>
+      </div>
+    </div>
+  </div>
+  <script>
+
+    // buttons and other "global" instances 
+    var copyButton = document.getElementById('copyButton');
+    var fullUrlSpan = document.getElementById('fullUrl');
+    var content = document.getElementById('content');
+    var drawer = document.getElementById('drawer');
+
+
+    function validateURL() {
+      // Regular expression to match a valid URL patterng.
+      var urlPattern = /^(https?:\/\/)(www\.)([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})(\/[a-zA-Z0-9-._~:/?#[\]@!$&'()*+,;=]*)?$/i;
+
+      var urlField = document.getElementById('url');
+      var url = urlField.value.trim();
+
+      if (urlPattern.test(url)) {
+        // Valid URL, remove invalid styling
+        urlField.classList.remove('is-invalid');
+        // Scroll to the invalid input field
+        urlField.scrollIntoView({ behavior: 'smooth' });
+        return true; // Return true to indicate validation success
+      } else {
+        // Invalid URL, add invalid styling
+        urlField.classList.add('is-invalid');
+        return false; // Return false to indicate validation failure
+      }
+    }
+    // URL Pattern validation
+    document.getElementById('url').addEventListener('blur', function () {
+      validateURL();
+    });
+
+    document.getElementById('form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var startDateCheckbox = document.getElementById('start_date_checkbox');
+      var startDateInput = document.getElementById('start_date');
+      var form = event.target;
+
+      // Conditionally require the start_date input
+      if (startDateCheckbox.checked) {
+        startDateInput.required = true;
+      } else {
+        startDateInput.required = false;
+      }
+
+      // Trigger URL validation on form submission
+      // Validate the URL input
+      var isURLValid = validateURL();
+
+      if (!isURLValid || !form.checkValidity()) {
+        event.stopPropagation();
+      } else {
+        form.classList.add('was-validated');
+        generateFullURL();
+      }
+    });
+
+    function generateFullURL() {
+      var url = document.getElementById('url').value;
+      var utm_id = document.getElementById('utm_id').value;
+      var utm_source = document.getElementById('utm_source').value;
+      var utm_medium = document.getElementById('utm_medium').value;
+      var utm_campaign = document.getElementById('utm_campaign').value;
+      var utm_term = document.getElementById('utm_term').value;
+      var utm_content = document.getElementById('utm_content').value;
+
+      // Construct the URL with UTM parameters
+      var fullUrl = url;
+
+      if (utm_id) {
+        fullUrl += "?utm_id=" + encodeURIComponent(utm_id);
+      }
+      if (utm_source) {
+        fullUrl += "?utm_source=" + encodeURIComponent(utm_source);
+      }
+      if (utm_medium) {
+        fullUrl += (fullUrl.includes("?") ? "&" : "?") + "utm_medium=" + encodeURIComponent(utm_medium);
+      }
+      if (utm_campaign) {
+        fullUrl += (fullUrl.includes("?") ? "&" : "?") + "utm_campaign=" + encodeURIComponent(utm_campaign);
+      }
+      if (utm_term) {
+        fullUrl += "?utm_term=" + encodeURIComponent(utm_term);
+      }
+      if (utm_content) {
+        fullUrl += (fullUrl.includes("?") ? "&" : "?") + "utm_content=" + encodeURIComponent(utm_content);
+      }
+
+      // Update the full URL
+      if (fullUrlSpan) {
+
+        fullUrlSpan.textContent = fullUrl;
+        addToCampaignHistory(fullUrl);
+        // Make copy button visible
+        copyButton.classList.remove('invisible');
+        copyButton.classList.add('visible');
+      } else {
+        copyButton.classList.remove('visible');
+        copyButton.classList.add('invisible');
+
+      }
+    }
+
+    function updateCampaignName() {
+      var dateField = document.getElementById('start_date');
+      var campaignField = document.getElementById('utm_campaign');
+      // Remove any existing date
+      campaignField.value = campaignField.value.replace(/^\d{8}_/, '');
+      // Check if the start date should be prepended
+      if (document.getElementById('start_date_checkbox').checked) {
+        var startDate = dateField.value.replaceAll('-', '');
+        campaignField.value = startDate + "_" + campaignField.value;
+      } else {
+        // Remove any existing date
+        campaignField.value = campaignField.value.replace(/^\d{8}_/, '');
+      }
+    }
+    // DATE PICKER SELECTION 
+    document.getElementById('start_date_checkbox').addEventListener('change', updateCampaignName);
+    // Initialize a variable to store the default or selected date
+    var selectedDate = '';
+
+    // Update the selectedDate variable when the date input changes
+    document.getElementById('start_date').addEventListener('change', function () {
+      selectedDate = this.value.replaceAll('-', '');
+      updateCampaignName();
+    });
+
+    // Update the selectedDate variable when the checkbox is checked
+    document.getElementById('start_date_checkbox').addEventListener('change', function () {
+
+      var dateField = document.getElementById('start_date');
+      if (this.checked) {
+        dateField.style.display = 'block';
+        dateField.value = new Date().toISOString().split('T')[0]; // Set to current date
+
+      } else {
+        dateField.setAttribute('disabled', 'true');
+        dateField.style.display = 'none';
+        selectedDate = '';
+      }
+      updateCampaignName();
+    });
+    
+    // Add an event listener to the form for the "reset" event
+    document.getElementById('form').addEventListener('reset', function () {
+      // Restore COPY button
+      copyButton.textContent = 'Copy UTM';
+      copyButton.classList.remove('visible');
+      copyButton.classList.add('invisible');
+      // Reset FULL URL text
+      var fullUrlSpan = document.getElementById('fullUrl');
+      fullUrlSpan.textContent = '';
+
+    });
+
+    // COPY FUNCTION 
+    document.getElementById('copyButton').addEventListener('click', function () {
+
+      if (fullUrlSpan) {
+        // Fallback to innerText if needed
+        var fullUrl = fullUrlSpan.textContent || fullUrlSpan.innerText;
+        var textArea = document.createElement('textarea');
+
+        textArea.value = fullUrl.trim();
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+
+        // Change the button text to "Copied!"
+        this.textContent = 'Copied!';
+        this.classList.remove('btn-primary'); // Remove the primary class
+        this.classList.add('btn-success'); // Add the success class
+      }
+      // Scroll back to the button's position
+      var buttonOffsetTop = copyButton.getBoundingClientRect().top;
+      window.scrollTo({
+        top: buttonOffsetTop + window.scrollY,
+        behavior: 'smooth', // You can use 'auto' for instant scrolling or 'smooth' for smooth scrolling
+      });
+    });
+
+    // DRAWER FUNCTIONS: AKA Left Navigation
+    // Toggle the drawer menu when the button is clicked
+    document.getElementById('toggleDrawer').addEventListener('click', function () {
+      drawer.classList.toggle('show');
+    });
+
+    document.getElementById('closeDrawer').addEventListener('click', function () {
+      drawer.classList.toggle('show');
+
+    });
+
+    // HISTORY LOCAL STORAGE
+    var campaignUrls = [];
+    // Initialize the campaignUrls array with the values from local storage, or an empty array if it doesn't exist
+    var campaignUrls = JSON.parse(localStorage.getItem('campaignUrls')) || [];
+
+    // Function to add a URL to the campaign history and save it to local storage
+    function addToCampaignHistory(url) {
+      // Add the URL to the array
+      campaignUrls.push(url);
+      // Update the list in the drawer menu
+      var ul = document.getElementById('storedUrls');
+      var li = document.createElement('li');
+      li.className = 'list-group-item';
+      li.textContent = url;
+      ul.appendChild(li);
+
+      // Save the updated array to local storage
+      localStorage.setItem('campaignUrls', JSON.stringify(campaignUrls));
+    }
+
+    // Function to load the campaignUrls array from local storage
+    function loadCampaignHistory() {
+      var storedUrls = localStorage.getItem('campaignUrls');
+      if (storedUrls) {
+        campaignUrls = JSON.parse(storedUrls);
+
+        // Populate the list in the drawer menu with stored URLs
+        var ul = document.getElementById('storedUrls');
+        campaignUrls.forEach(function (url) {
+          var li = document.createElement('li');
+          li.className = 'list-group-item';
+          li.textContent = url;
+          ul.appendChild(li);
+        });
+      }
+    }
+
+    // Function to delete the campaignUrls array from local storage
+    // Add an event listener to the "Delete History" button
+    document.getElementById('deleteHistory').addEventListener('click', function () {
+      // Confirm with the user before deleting the history
+      if (confirm('Are you sure you want to delete the campaign history?')) {
+        deleteCampaignHistory(); // Call the deleteCampaignHistory function
+      }
+    });
+
+    function deleteCampaignHistory() {
+      // Remove campaignUrls from localStorage
+      localStorage.removeItem('campaignUrls');
+
+      // Clear the list of stored URLs in the drawer menu
+      var ul = document.getElementById('storedUrls');
+      ul.innerHTML = ''; // Remove all list items
+
+      // You can also clear the campaignUrls array in memory if needed
+      campaignUrls = [];
+
+      // Optionally, you can update the UI or show a confirmation message
+      alert('Campaign history has been deleted.');
+    }
+  </script>
+</body>
+</html>
